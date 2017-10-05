@@ -5,6 +5,7 @@
     <string name="firebase_status_fmt">Firebase User: %s</string>
     <string name="signed_out">Signed Out</string>
     <string name="hello_username">Bonjour %s</string>
+    <string name="retrieve_contacts">Retrieve contacts</string>
     <string name="yes">Oui</string>
     <string name="no">Non</string>
 </resources>
