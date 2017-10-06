@@ -1,8 +1,13 @@
 package io.badr.sms;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -26,10 +31,18 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.WriteBatch;
 
+import org.apache.commons.codec.digest.DigestUtils;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import io.badr.sms.models.Contact;
 import io.badr.sms.models.User;
 
 public class MainActivity extends AppCompatActivity implements
@@ -38,6 +51,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private static final String TAG = "SevenMystSword";
     private static final int RC_SIGN_IN = 9001;
+    private static final int REQUEST_READ_CONTACTS = 100;
 
     // [START declare_auth]
     private FirebaseAuth mAuth;
@@ -52,7 +66,9 @@ public class MainActivity extends AppCompatActivity implements
 
     private FirebaseUser user;
 
-    FirebaseFirestore db;
+    private FirebaseFirestore db;
+
+    private Set<Contact> contacts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,11 +77,15 @@ public class MainActivity extends AppCompatActivity implements
 
         Log.d(TAG, "onCreate");
 
+        // contacts
+        contacts = new HashSet<>();
+
         // Views
-        mStatusTextView = (TextView) findViewById(R.id.status);
+        mStatusTextView = findViewById(R.id.status);
 
         // Button listeners
         findViewById(R.id.sign_in_button).setOnClickListener(this);
+        findViewById(R.id.retrieve_contacts_button).setOnClickListener(this);
 
         // [START config_signin]
         // Configure Google Sign In
@@ -256,14 +276,16 @@ public class MainActivity extends AppCompatActivity implements
         //hideProgressDialog();
         if (user != null) {
             mStatusTextView.setText(getString(R.string.hello_username, user.getDisplayName()));
-            //mDetailTextView.setText(getString(R.string.firebase_status_fmt, user.getUid()));
+            //mDetailTextView.setText(getString(R.string.firebase_status_fmt, user.getUniqueId()));
 
             findViewById(R.id.sign_in_button).setVisibility(View.GONE);
+            findViewById(R.id.retrieve_contacts_button).setVisibility(View.VISIBLE);
             //findViewById(R.id.sign_out_and_disconnect).setVisibility(View.VISIBLE);
         } else {
             mStatusTextView.setText(R.string.signed_out);
 
             findViewById(R.id.sign_in_button).setVisibility(View.VISIBLE);
+            findViewById(R.id.retrieve_contacts_button).setVisibility(View.GONE);
             //findViewById(R.id.sign_out_and_disconnect).setVisibility(View.GONE);
         }
     }
@@ -276,15 +298,95 @@ public class MainActivity extends AppCompatActivity implements
         Toast.makeText(this, "Google Play Services error.", Toast.LENGTH_SHORT).show();
     }
 
+    public void synchronizeContacts() {
+        this.retrieveContacts();
+
+        String userUid = this.user.getUid();
+        WriteBatch batch = this.db.batch();
+        CollectionReference contactsRef = this.db.collection("users").document(userUid).collection("contacts");
+
+        for (Contact contact : this.contacts) {
+            Log.d(TAG, "synchronizeContacts: " + contact.toString());
+
+            DocumentReference contactRef = contactsRef.document(contact.getUniqueId());
+            batch.set(contactRef, contact);
+        }
+
+        batch.commit().addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                Log.d(TAG, "synchronizeContacts: contacts saved on database");
+            }
+        });
+    }
+
+    private void retrieveContacts() {
+        Log.d(TAG, "synchronizeContacts");
+
+        // Here, thisActivity is the current activity
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+
+            // No explanation needed, we can request the permission.
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{android.Manifest.permission.READ_CONTACTS},
+                    REQUEST_READ_CONTACTS);
+
+            // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+            // app-defined int constant. The callback method gets the
+            // result of the request.
+
+            return;
+        }
+
+        Cursor phoneCursor = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, null, null, null);
+
+        if (phoneCursor == null || phoneCursor.getCount() == 0) {
+            return;
+        }
+        Log.d(TAG, "synchronizeContacts: " + Integer.toString(phoneCursor.getCount()) + " contacts to retrieve");
+
+        while (phoneCursor.moveToNext())
+        {
+            boolean hasPhoneNumber = phoneCursor.getInt(phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.HAS_PHONE_NUMBER)) != 0;
+            if (!hasPhoneNumber) {
+                continue;
+            }
+
+            String name = phoneCursor.getString(phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY));
+            String phoneNumber = phoneCursor.getString(phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+            String contactId = phoneCursor.getString(phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID));
+            int typeId = phoneCursor.getInt(phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE));
+            String type = "";
+            switch (typeId) {
+                case ContactsContract.CommonDataKinds.Phone.TYPE_HOME:
+                    type = "home";
+                    break;
+                case ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE:
+                    type = "mobile";
+                    break;
+                case ContactsContract.CommonDataKinds.Phone.TYPE_WORK:
+                    type = "work";
+                    break;
+            }
+            Contact contact = new Contact(phoneNumber, name, DigestUtils.md5Hex(contactId), type);
+            this.contacts.add(contact);
+        }
+
+        phoneCursor.close();
+
+        Log.d(TAG, "synchronizeContacts: " + Integer.toString(contacts.size()) + " unique contacts");
+    }
+
     @Override
     public void onClick(View v) {
         int i = v.getId();
         if (i == R.id.sign_in_button) {
             signIn();
+        } else if (i == R.id.retrieve_contacts_button) {
+            synchronizeContacts();
         }
-        /* else if (i == R.id.sign_out_button) {
-            signOut();
-        } else if (i == R.id.disconnect_button) {
+        /* else if (i == R.id.disconnect_button) {
             revokeAccess();
         }*/
     }
