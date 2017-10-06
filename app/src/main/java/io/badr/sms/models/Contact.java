@@ -4,23 +4,21 @@ public class Contact {
     private String phoneNumber;
     private String name;
     private String uniqueId;
+    private String type;
 
-    public Contact(String phoneNumber, String name, String uniqueId) {
+    public Contact(String phoneNumber, String name, String uniqueId, String type) {
         this.setPhoneNumber(phoneNumber);
         this.name = name;
         this.uniqueId = uniqueId;
+        this.type = type;
+    }
+
+    public String getType() {
+        return type;
     }
 
     public String getPhoneNumber() {
         return phoneNumber;
-    }
-
-    public String getUniqueId() {
-        return uniqueId;
-    }
-
-    public String getPhoneNumberWithoutSpecialChars() {
-        return phoneNumber.replaceAll("\\+|-|\\(|\\)", "");
     }
 
     private void setPhoneNumber(String phoneNumber) {
@@ -32,6 +30,14 @@ public class Contact {
         }
 
         this.phoneNumber = phoneNumber;
+    }
+
+    public String getUniqueId() {
+        return uniqueId;
+    }
+
+    public String getPhoneNumberWithoutSpecialChars() {
+        return phoneNumber.replaceAll("\\+|-|\\(|\\)", "");
     }
 
     public String getName() {
@@ -55,6 +61,8 @@ public class Contact {
     public int hashCode() {
         int result = getPhoneNumberWithoutSpecialChars().hashCode();
         result = 31 * result + name.hashCode();
+        result = 31 * result + uniqueId.hashCode();
+        result = 31 * result + type.hashCode();
         return result;
     }
 
@@ -64,6 +72,7 @@ public class Contact {
                 "phoneNumber='" + phoneNumber + '\'' +
                 ", name='" + name + '\'' +
                 ", uniqueId='" + uniqueId + '\'' +
+                ", type='" + type + '\'' +
                 '}';
     }
 }

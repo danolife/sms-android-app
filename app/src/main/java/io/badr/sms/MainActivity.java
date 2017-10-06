@@ -40,7 +40,6 @@ import com.google.firebase.firestore.WriteBatch;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 import io.badr.sms.models.Contact;
@@ -67,7 +66,9 @@ public class MainActivity extends AppCompatActivity implements
 
     private FirebaseUser user;
 
-    FirebaseFirestore db;
+    private FirebaseFirestore db;
+
+    private Set<Contact> contacts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,8 +77,11 @@ public class MainActivity extends AppCompatActivity implements
 
         Log.d(TAG, "onCreate");
 
+        // contacts
+        contacts = new HashSet<>();
+
         // Views
-        mStatusTextView = (TextView) findViewById(R.id.status);
+        mStatusTextView = findViewById(R.id.status);
 
         // Button listeners
         findViewById(R.id.sign_in_button).setOnClickListener(this);
@@ -294,8 +298,30 @@ public class MainActivity extends AppCompatActivity implements
         Toast.makeText(this, "Google Play Services error.", Toast.LENGTH_SHORT).show();
     }
 
-    public void retrieveContacts() {
-        Log.d(TAG, "retrieveContacts");
+    public void synchronizeContacts() {
+        this.retrieveContacts();
+
+        String userUid = this.user.getUid();
+        WriteBatch batch = this.db.batch();
+        CollectionReference contactsRef = this.db.collection("users").document(userUid).collection("contacts");
+
+        for (Contact contact : this.contacts) {
+            Log.d(TAG, "synchronizeContacts: " + contact.toString());
+
+            DocumentReference contactRef = contactsRef.document(contact.getUniqueId());
+            batch.set(contactRef, contact);
+        }
+
+        batch.commit().addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                Log.d(TAG, "synchronizeContacts: contacts saved on database");
+            }
+        });
+    }
+
+    private void retrieveContacts() {
+        Log.d(TAG, "synchronizeContacts");
 
         // Here, thisActivity is the current activity
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
@@ -314,14 +340,11 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         Cursor phoneCursor = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, null, null, null);
-        Set<Contact> contacts = new HashSet<>();
 
-        if (phoneCursor.getCount() == 0) {
+        if (phoneCursor == null || phoneCursor.getCount() == 0) {
             return;
         }
-        Log.d(TAG, "retrieveContacts: " + Integer.toString(phoneCursor.getCount()) + " contacts to retrieve");
-
-        String userUid = user.getUid();
+        Log.d(TAG, "synchronizeContacts: " + Integer.toString(phoneCursor.getCount()) + " contacts to retrieve");
 
         while (phoneCursor.moveToNext())
         {
@@ -333,31 +356,26 @@ public class MainActivity extends AppCompatActivity implements
             String name = phoneCursor.getString(phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY));
             String phoneNumber = phoneCursor.getString(phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
             String contactId = phoneCursor.getString(phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID));
-            Contact contact = new Contact(phoneNumber, name, DigestUtils.md5Hex(contactId));
-            contacts.add(contact);
+            int typeId = phoneCursor.getInt(phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE));
+            String type = "";
+            switch (typeId) {
+                case ContactsContract.CommonDataKinds.Phone.TYPE_HOME:
+                    type = "home";
+                    break;
+                case ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE:
+                    type = "mobile";
+                    break;
+                case ContactsContract.CommonDataKinds.Phone.TYPE_WORK:
+                    type = "work";
+                    break;
+            }
+            Contact contact = new Contact(phoneNumber, name, DigestUtils.md5Hex(contactId), type);
+            this.contacts.add(contact);
         }
 
         phoneCursor.close();
 
-        Log.d(TAG, "retrieveContacts: " + Integer.toString(contacts.size()) + " unique contacts");
-
-        WriteBatch batch = db.batch();
-        CollectionReference contactsRef = db.collection("users").document(userUid).collection("contacts");
-
-        for (Iterator<Contact> i = contacts.iterator(); i.hasNext();) {
-            Contact contact = i.next();
-            Log.d(TAG, "retrieveContacts: " + contact.toString());
-
-            DocumentReference contactRef = contactsRef.document(contact.getUniqueId());
-            batch.set(contactRef, contact);
-        }
-
-        batch.commit().addOnCompleteListener(new OnCompleteListener<Void>() {
-            @Override
-            public void onComplete(@NonNull Task<Void> task) {
-                Log.d(TAG, "retrieveContacts: contacts saved on database");
-            }
-        });
+        Log.d(TAG, "synchronizeContacts: " + Integer.toString(contacts.size()) + " unique contacts");
     }
 
     @Override
@@ -366,7 +384,7 @@ public class MainActivity extends AppCompatActivity implements
         if (i == R.id.sign_in_button) {
             signIn();
         } else if (i == R.id.retrieve_contacts_button) {
-            retrieveContacts();
+            synchronizeContacts();
         }
         /* else if (i == R.id.disconnect_button) {
             revokeAccess();
