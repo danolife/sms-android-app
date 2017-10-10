@@ -1,0 +1,44 @@
+sudo: false
+language: android
+jdk: oraclejdk8
+
+android:
+  components:
+  - platform-tools
+  - tools
+  - build-tools-23.0.3
+  - android-23
+
+before_install:
+- openssl aes-256-cbc -K $encrypted_9554e9d64ef0_key -iv $encrypted_9554e9d64ef0_iv
+  -in google-services.json.enc -out google-services.json -d
+- chmod +x gradlew
+
+script:
+- "./gradlew clean build connectedAndroidTest -PdisablePreDex --stacktrace"
+
+notifications:
+  email: true
+
+before_cache:
+- rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
+
+cache:
+  directories:
+  - "$HOME/.m2"
+  - "$HOME/.gradle"
+  - "$HOME/.gradle/caches/"
+  - "$HOME/.gradle/wrapper/"
+
+deploy:
+  skip_cleanup: 'true'
+  provider: releases
+  api_key:
+    secure: kTKMLoVzqiaSLWirkoO2X77I0OqZskCGNw2LBRLEsbDdau9Y0ZiYHeD6NTLMGhb8vMG3Uww9ihimBvNwAOzkZug33r/qaQO3UwUAN8Roi+A66mclLjWb2RUGxf5eR0kn6Lm36iv0lFRK9YtKMCXOkhDc7XWSJknRVDQW9nF9HT0O/bO9PXiFeEAmuS5bct8jZ3q8H/WY4N6jIdSaP4LSlp4qv/SimbsR0oUz5zRpMPUU1KxwzGeHr/wH+08bwckaGgl3jwgH8MahFFtarHktqjmcTbT5CCbSYQcYyth10uxm6Tj0M+hwKG08/qjKPmQK5cjZm8paQkTLWTaXbS8LHzPcMV9ec1Gcr9GgQhIXj8cfW2MTR7tnW4OE98uMG0btuWC/4+67hlnAHnGwR6bF1i9CueJEkGK0jpjlfHyrl2qAYirp40/fIUOufNNR+WMaQoF5I0y7tOyQVg03htpjYNhmehV2hYEC06/wwai60fJNUsQEOoLCXoB0S6gxkZcxIFC7AROxNiuMsaVGp7/QRygf6eFxO3ItdEOkHwcsp9ggveISlrFEsY/fBwHclfXzlw8/6xTZLSRJTQrnSBNdo9cTpcmw5aE6RrjfFxxEFEtQMuH4+IoOxblQWRGPlhw9RvbmiZ3CZ31AkvDRwEg+5vrWSA7Kd0aps3hd76cBAKg=
+  file: app/build/outputs/apk/app*release*.apk
+  on:
+    branch: master
+    repo: danolife/sms-android-app
+
+after_success:
+- sh set_tags.sh
