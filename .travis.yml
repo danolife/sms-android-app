@@ -1,35 +1,28 @@
 sudo: false
 language: android
 jdk: oraclejdk8
-
 android:
   components:
   - platform-tools
   - tools
   - build-tools-23.0.3
   - android-23
-
 before_install:
-- openssl aes-256-cbc -K $encrypted_9554e9d64ef0_key -iv $encrypted_9554e9d64ef0_iv
-  -in google-services.json.enc -out google-services.json -d
+- openssl aes-256-cbc -K $encrypted_6366527a78c9_key -iv $encrypted_6366527a78c9_iv
+  -in google-services.json.enc -out app/google-services.json -d
 - chmod +x gradlew
-
 script:
 - "./gradlew clean build connectedAndroidTest -PdisablePreDex --stacktrace"
-
 notifications:
   email: true
-
 before_cache:
 - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
-
 cache:
   directories:
   - "$HOME/.m2"
   - "$HOME/.gradle"
   - "$HOME/.gradle/caches/"
   - "$HOME/.gradle/wrapper/"
-
 deploy:
   skip_cleanup: 'true'
   provider: releases
@@ -39,6 +32,5 @@ deploy:
   on:
     branch: master
     repo: danolife/sms-android-app
-
 after_success:
 - sh set_tags.sh
