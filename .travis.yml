@@ -12,7 +12,7 @@ before_install:
   -in google-services.json.enc -out app/google-services.json -d
 - chmod +x gradlew
 script:
-- "./gradlew clean build connectedAndroidTest -PdisablePreDex --stacktrace"
+- "./gradlew clean build connectedCheck -PdisablePreDex --stacktrace"
 notifications:
   email: true
 before_cache:
@@ -23,12 +23,19 @@ cache:
   - "$HOME/.gradle"
   - "$HOME/.gradle/caches/"
   - "$HOME/.gradle/wrapper/"
+before_deploy:
+- cp $TRAVIS_BUILD_DIR/keystore.jks $HOME
+- cd app/build/outputs/apk/
+- jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore $HOME/keystore.jks -storepass $storepass -keypass $keypass app-release-unsigned.apk sms
+# Verification
+- jarsigner -verify app-release-unsigned.apk
+- "${ANDROID_HOME}/build-tools/26.0.2/zipalign -v 4 app-release-unsigned.apk sms.apk"
 deploy:
   skip_cleanup: 'true'
   provider: releases
   api_key:
     secure: kTKMLoVzqiaSLWirkoO2X77I0OqZskCGNw2LBRLEsbDdau9Y0ZiYHeD6NTLMGhb8vMG3Uww9ihimBvNwAOzkZug33r/qaQO3UwUAN8Roi+A66mclLjWb2RUGxf5eR0kn6Lm36iv0lFRK9YtKMCXOkhDc7XWSJknRVDQW9nF9HT0O/bO9PXiFeEAmuS5bct8jZ3q8H/WY4N6jIdSaP4LSlp4qv/SimbsR0oUz5zRpMPUU1KxwzGeHr/wH+08bwckaGgl3jwgH8MahFFtarHktqjmcTbT5CCbSYQcYyth10uxm6Tj0M+hwKG08/qjKPmQK5cjZm8paQkTLWTaXbS8LHzPcMV9ec1Gcr9GgQhIXj8cfW2MTR7tnW4OE98uMG0btuWC/4+67hlnAHnGwR6bF1i9CueJEkGK0jpjlfHyrl2qAYirp40/fIUOufNNR+WMaQoF5I0y7tOyQVg03htpjYNhmehV2hYEC06/wwai60fJNUsQEOoLCXoB0S6gxkZcxIFC7AROxNiuMsaVGp7/QRygf6eFxO3ItdEOkHwcsp9ggveISlrFEsY/fBwHclfXzlw8/6xTZLSRJTQrnSBNdo9cTpcmw5aE6RrjfFxxEFEtQMuH4+IoOxblQWRGPlhw9RvbmiZ3CZ31AkvDRwEg+5vrWSA7Kd0aps3hd76cBAKg=
-  file: app/build/outputs/apk/app*release*.apk
+  file: sms.apk
   on:
     branch: master
     repo: danolife/sms-android-app
