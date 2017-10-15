@@ -9,10 +9,8 @@ android:
   - android-26
 before_install:
 - openssl aes-256-cbc -K $encrypted_6366527a78c9_key -iv $encrypted_6366527a78c9_iv
-  -in keystore.jks.enc -out keystore.jks -d
-- openssl aes-256-cbc -K $encrypted_6366527a78c9_key -iv $encrypted_6366527a78c9_iv
   -in google-services.json.enc -out app/google-services.json -d
-- openssl aes-256-cbc -K $encrypted_6366527a78c9_key -iv $encrypted_6366527a78c9_iv
+- openssl aes-256-cbc -K $encrypted_1234527a78c9_key -iv $encrypted_1234527a78c9_iv
   -in keystore.jks.enc -out keystore.jks -d
 - chmod +x gradlew
 script:
@@ -38,7 +36,7 @@ deploy:
   skip_cleanup: 'true'
   provider: releases
   api_key:
-    secure: kTKMLoVzqiaSLWirkoO2X77I0OqZskCGNw2LBRLEsbDdau9Y0ZiYHeD6NTLMGhb8vMG3Uww9ihimBvNwAOzkZug33r/qaQO3UwUAN8Roi+A66mclLjWb2RUGxf5eR0kn6Lm36iv0lFRK9YtKMCXOkhDc7XWSJknRVDQW9nF9HT0O/bO9PXiFeEAmuS5bct8jZ3q8H/WY4N6jIdSaP4LSlp4qv/SimbsR0oUz5zRpMPUU1KxwzGeHr/wH+08bwckaGgl3jwgH8MahFFtarHktqjmcTbT5CCbSYQcYyth10uxm6Tj0M+hwKG08/qjKPmQK5cjZm8paQkTLWTaXbS8LHzPcMV9ec1Gcr9GgQhIXj8cfW2MTR7tnW4OE98uMG0btuWC/4+67hlnAHnGwR6bF1i9CueJEkGK0jpjlfHyrl2qAYirp40/fIUOufNNR+WMaQoF5I0y7tOyQVg03htpjYNhmehV2hYEC06/wwai60fJNUsQEOoLCXoB0S6gxkZcxIFC7AROxNiuMsaVGp7/QRygf6eFxO3ItdEOkHwcsp9ggveISlrFEsY/fBwHclfXzlw8/6xTZLSRJTQrnSBNdo9cTpcmw5aE6RrjfFxxEFEtQMuH4+IoOxblQWRGPlhw9RvbmiZ3CZ31AkvDRwEg+5vrWSA7Kd0aps3hd76cBAKg=
+    secure: HLVQY7EDaQ0plcFZhhwL2aQNrtNStS4a+lGhqdBjoTAwVr6r/fPTG7ZtCNwxeAMTim1/+U7Hi8r80F2qS8tZa8MsrqhWX5Zqsgcm7rcPvvKeiPCUGWGe49lexsIStQey4GYqRUhnZXyByQoiG4uBdsAhJeStGvx2G1uWrqP1KIExGak8CmUr99BEX4BuaUze+DoLkaVLREP32UZPjsJL0noAodEMlTOasBqIHieMDeNSM8gIJlbDWAtYJ60GsMhJbqhx0xcbNL5oLy1xOIdM0ABY+qQQK1vXhsPtdPzktRi0bolAH5jqPv52UypDyajMyVWLpD1unLy64UGbxS37O/PoMwY5IdY79lSJ85Zl+VHV1Q+V7qL8afgZ6dUGktpgkQpYSoSYbvioBzkC9K7Ju6+vcF7m5q3kI7pYlN5vpAOjyzyUku3X7Fc8Jv5a3y4AtAWmtfQg8hnxnJ24EcmPmKIeKRz+pVey2mNnzcQP6WcOP+Wdh33HPJReX9jDe/txtVNZmVPGueF+DimwTeIeuxL8vUgQ7r99VQMPCM7b36JsKm9B4uv2+Jvib/YJcEsaGX1A/sovhYFZmH9ibi0/HAN3RhxwaxwlJL8giMsDuuOqFHjbQjYPAZRvbeeRDWCubVoseBfFirw0RGAQ23YRJXcqNsGSWLN6WeiLzVrBxRo=
   file: sms.apk
   on:
     branch: master
